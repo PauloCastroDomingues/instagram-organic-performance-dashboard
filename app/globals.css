@@ -40,6 +40,15 @@ select {
   font: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #242320;
+  color: #f4f4f4;
+}
+
 ::selection {
   background: #fb5d06;
   color: #1d1d1b;

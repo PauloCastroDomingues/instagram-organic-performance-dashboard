@@ -10,10 +10,14 @@ import {
   ComposedChart,
   Legend,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
-  YAxis
+  YAxis,
+  ZAxis
 } from "recharts";
 import { formatCompactNumber, formatFullNumber, formatPercent } from "@/lib/format";
 
@@ -108,6 +112,47 @@ export function HorizontalBarChart({
   );
 }
 
+function MatrixTooltip({ active, payload }: any) {
+  if (!active || !payload?.[0]?.payload) return null;
+  const point = payload[0].payload;
+  return (
+    <div className="max-w-[290px] rounded-md border border-white/10 bg-[#151514] px-3 py-2 text-sm shadow-panel">
+      <div className="text-xs uppercase tracking-[0.12em] text-apex">{point.quadrant} · {point.type}</div>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/58">{point.description || "Sem descrição"}</p>
+      <div className="mt-2 flex justify-between gap-5 text-white/72"><span>Alcance</span><strong className="text-paper">{formatFullNumber(point.reach)}</strong></div>
+      <div className="flex justify-between gap-5 text-white/72"><span>Engajamento</span><strong className="text-paper">{formatPercent(point.engagement)}</strong></div>
+    </div>
+  );
+}
+
+export function PerformanceMatrixChart({ data, reachMedian, engagementMedian }: { data: any[]; reachMedian: number; engagementMedian: number }) {
+  const colors: Record<string, string> = {
+    Destaques: "#FB5D06",
+    Alcance: "#F4F4F4",
+    Profundidade: "#34D399",
+    "A desenvolver": "#6B6764"
+  };
+  const groups = Object.keys(colors).map((quadrant) => ({ quadrant, points: data.filter((point) => point.quadrant === quadrant) }));
+
+  return (
+    <div className="h-[390px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 12, right: 18, bottom: 12, left: 0 }}>
+          <CartesianGrid stroke={gridColor} />
+          <XAxis type="number" dataKey="reach" name="Alcance" tick={axisStyle} tickLine={false} axisLine={false} tickFormatter={formatCompactNumber} />
+          <YAxis type="number" dataKey="engagement" name="Engajamento" tick={axisStyle} tickLine={false} axisLine={false} tickFormatter={formatPercent} />
+          <ZAxis type="number" dataKey="views" range={[42, 180]} />
+          <ReferenceLine x={reachMedian} stroke="rgba(244,244,244,.32)" strokeDasharray="4 4" />
+          <ReferenceLine y={engagementMedian} stroke="rgba(244,244,244,.32)" strokeDasharray="4 4" />
+          <Tooltip content={<MatrixTooltip />} />
+          <Legend />
+          {groups.map((group) => <Scatter key={group.quadrant} name={group.quadrant} data={group.points} fill={colors[group.quadrant]} opacity={0.8} />)}
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function TypePerformanceTable({ data }: { data: any[] }) {
   return (
     <div className="scrollbar-soft overflow-x-auto rounded-lg border border-white/10">
@@ -117,6 +162,7 @@ export function TypePerformanceTable({ data }: { data: any[] }) {
             <th className="px-4 py-3">Tipo</th>
             <th className="px-4 py-3 text-right">Posts</th>
             <th className="px-4 py-3 text-right">Alcance médio</th>
+            <th className="px-4 py-3 text-right">Alcance mediano</th>
             <th className="px-4 py-3 text-right">Visualizações médias</th>
             <th className="px-4 py-3 text-right">Engajamento</th>
             <th className="px-4 py-3 text-right">Compartilhamento</th>
@@ -130,6 +176,7 @@ export function TypePerformanceTable({ data }: { data: any[] }) {
               <td className="px-4 py-3 font-semibold text-paper">{row.type}</td>
               <td className="px-4 py-3 text-right">{formatFullNumber(row.posts)}</td>
               <td className="px-4 py-3 text-right">{formatCompactNumber(row.avgReach)}</td>
+              <td className="px-4 py-3 text-right">{formatCompactNumber(row.medianReach)}</td>
               <td className="px-4 py-3 text-right">{formatCompactNumber(row.avgViews)}</td>
               <td className="px-4 py-3 text-right">{formatPercent(row.engagementRate)}</td>
               <td className="px-4 py-3 text-right">{formatPercent(row.shareRate)}</td>

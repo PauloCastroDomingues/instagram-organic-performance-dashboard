@@ -2,22 +2,21 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { Activity, BarChart3, FileText, Search } from "lucide-react";
-import type { DateRange, InstagramPost, MetricKey } from "@/lib/types";
+import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, Eye, FileText, Heart, Search, UserPlus } from "lucide-react";
+import type { ComparisonMode, DateRange, InstagramPost, MetricKey } from "@/lib/types";
 import { formatCompactNumber, formatDate, formatDecimal, formatFullNumber, formatPercent } from "@/lib/format";
-import { filterPosts, chooseAggregationMode, aggregateTimeline, aggregateByType, aggregateByWeekday, aggregateByHourBand, aggregatePerformanceDistribution } from "@/lib/aggregations";
+import { filterPosts, chooseAggregationMode, aggregateTimeline, aggregateByType, aggregateByWeekday, aggregateByHourBand, aggregatePerformanceDistribution, aggregateReachConcentration, aggregatePerformanceMatrix } from "@/lib/aggregations";
 import { getPostsInRange, getPreviousPeriodRange, getYearAgoPeriodRange, sumPosts, variation } from "@/lib/metrics";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { KpiCard } from "@/components/cards/KpiCard";
 import { ChartFrame } from "@/components/charts/ChartFrame";
-import { HorizontalBarChart, TimelineChart, TypePerformanceTable, VolumeReachChart } from "@/components/charts/Charts";
+import { HorizontalBarChart, PerformanceMatrixChart, TimelineChart, TypePerformanceTable, VolumeReachChart } from "@/components/charts/Charts";
 
 type DashboardProps = {
   posts: InstagramPost[];
 };
 
 type ViewKey = "overview" | "content" | "analysis";
-type ComparisonMode = "previous" | "yearAgo";
 
 const views: Array<{ key: ViewKey; label: string; icon: typeof BarChart3 }> = [
   { key: "overview", label: "Visão geral", icon: BarChart3 },
@@ -54,7 +53,7 @@ export function Dashboard({ posts }: DashboardProps) {
   const comparisonRange = useMemo(() => {
     const start = new Date(`${range.start}T00:00:00`);
     const end = new Date(`${range.end}T23:59:59`);
-    return comparisonMode === "previous" ? getPreviousPeriodRange(start, end) : getYearAgoPeriodRange(start, end);
+    return comparisonMode === "yearAgo" ? getYearAgoPeriodRange(start, end) : getPreviousPeriodRange(start, end);
   }, [range, comparisonMode]);
   const comparisonTotals = useMemo(() => {
     const comparisonPosts = getPostsInRange(posts, comparisonRange.start, comparisonRange.end);
@@ -105,7 +104,7 @@ export function Dashboard({ posts }: DashboardProps) {
         </nav>
       </div>
 
-      <FilterBar range={range} availableRange={availableRange} postType={postType} postTypes={postTypes} onRangeChange={setRange} onPostTypeChange={setPostType} />
+      <FilterBar range={range} availableRange={availableRange} comparisonMode={comparisonMode} postType={postType} postTypes={postTypes} onRangeChange={setRange} onComparisonModeChange={setComparisonMode} onPostTypeChange={setPostType} />
 
       {view === "overview" ? (
         <Overview
@@ -114,7 +113,6 @@ export function Dashboard({ posts }: DashboardProps) {
           range={range}
           comparisonRange={comparisonRange}
           comparisonMode={comparisonMode}
-          setComparisonMode={setComparisonMode}
           timeline={timeline}
           typePerformance={typePerformance}
           metric={metric}
@@ -133,7 +131,6 @@ function Overview({
   range,
   comparisonRange,
   comparisonMode,
-  setComparisonMode,
   timeline,
   typePerformance,
   metric,
@@ -144,31 +141,30 @@ function Overview({
   range: DateRange;
   comparisonRange: { start: Date; end: Date };
   comparisonMode: ComparisonMode;
-  setComparisonMode: (mode: ComparisonMode) => void;
   timeline: any[];
   typePerformance: any[];
   metric: MetricKey;
   setMetric: (metric: MetricKey) => void;
 }) {
   const kpis = [
-    ["Publicações", formatFullNumber(totals.publications), variation(totals.publications, comparisonTotals.publications)],
-    ["Visualizações", formatCompactNumber(totals.views), variation(totals.views, comparisonTotals.views)],
-    ["Alcance", formatCompactNumber(totals.reach), variation(totals.reach, comparisonTotals.reach)],
-    ["Interações", formatCompactNumber(totals.interactions), variation(totals.interactions, comparisonTotals.interactions)],
-    ["Salvamentos", formatCompactNumber(totals.saves), variation(totals.saves, comparisonTotals.saves)],
-    ["Compartilhamentos", formatCompactNumber(totals.shares), variation(totals.shares, comparisonTotals.shares)],
-    ["Seguidores ganhos", formatCompactNumber(totals.follows), variation(totals.follows, comparisonTotals.follows)]
+    ["Publicações", formatFullNumber(totals.publications), comparisonMode === "none" ? undefined : variation(totals.publications, comparisonTotals.publications)],
+    ["Visualizações", formatCompactNumber(totals.views), comparisonMode === "none" ? undefined : variation(totals.views, comparisonTotals.views)],
+    ["Alcance", formatCompactNumber(totals.reach), comparisonMode === "none" ? undefined : variation(totals.reach, comparisonTotals.reach)],
+    ["Interações", formatCompactNumber(totals.interactions), comparisonMode === "none" ? undefined : variation(totals.interactions, comparisonTotals.interactions)],
+    ["Salvamentos", formatCompactNumber(totals.saves), comparisonMode === "none" ? undefined : variation(totals.saves, comparisonTotals.saves)],
+    ["Compartilhamentos", formatCompactNumber(totals.shares), comparisonMode === "none" ? undefined : variation(totals.shares, comparisonTotals.shares)],
+    ["Seguidores ganhos", formatCompactNumber(totals.follows), comparisonMode === "none" ? undefined : variation(totals.follows, comparisonTotals.follows)]
   ] as const;
 
   return (
     <div className="mt-5 space-y-5">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {kpis.map(([label, value, delta]) => (
-          <KpiCard key={label} label={label} value={value} variation={delta} helper={comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior"} />
+          <KpiCard key={label} label={label} value={value} variation={delta} showVariation={comparisonMode !== "none"} helper={comparisonMode === "none" ? "Período selecionado" : comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior"} />
         ))}
       </section>
 
-      <PeriodComparison totals={totals} comparisonTotals={comparisonTotals} range={range} comparisonRange={comparisonRange} comparisonMode={comparisonMode} setComparisonMode={setComparisonMode} />
+      {comparisonMode !== "none" ? <PeriodComparison totals={totals} comparisonTotals={comparisonTotals} range={range} comparisonRange={comparisonRange} comparisonMode={comparisonMode} /> : null}
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <ChartFrame title="Evolução da performance" subtitle="A agregação muda entre diária, semanal e mensal conforme o intervalo.">
@@ -206,15 +202,13 @@ function PeriodComparison({
   comparisonTotals,
   range,
   comparisonRange,
-  comparisonMode,
-  setComparisonMode
+  comparisonMode
 }: {
   totals: ReturnType<typeof sumPosts>;
   comparisonTotals: ReturnType<typeof sumPosts>;
   range: DateRange;
   comparisonRange: { start: Date; end: Date };
   comparisonMode: ComparisonMode;
-  setComparisonMode: (mode: ComparisonMode) => void;
 }) {
   const rows = [
     { label: "Publicações", current: totals.publications, previous: comparisonTotals.publications, format: formatFullNumber },
@@ -229,20 +223,6 @@ function PeriodComparison({
       title="Comparação entre períodos"
       subtitle={comparisonMode === "previous" ? "Compara com o intervalo imediatamente anterior, de mesma duração." : "Compara com as mesmas datas do ano anterior."}
     >
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-        <button
-          className={clsx("min-h-10 rounded-md border px-3 text-sm font-semibold", comparisonMode === "previous" ? "border-apex bg-apex text-pneu" : "border-white/10 bg-white/[0.04] text-white/64")}
-          onClick={() => setComparisonMode("previous")}
-        >
-          Período anterior
-        </button>
-        <button
-          className={clsx("min-h-10 rounded-md border px-3 text-sm font-semibold", comparisonMode === "yearAgo" ? "border-apex bg-apex text-pneu" : "border-white/10 bg-white/[0.04] text-white/64")}
-          onClick={() => setComparisonMode("yearAgo")}
-        >
-          Mesmo período do ano anterior
-        </button>
-      </div>
       <div className="mb-4 grid grid-cols-1 gap-2 rounded-md bg-white/[0.035] p-3 text-xs text-white/52 sm:grid-cols-2 md:hidden">
         <span><strong className="text-paper">Atual:</strong> {formatDate(range.start)} a {formatDate(range.end)}</span>
         <span><strong className="text-paper">Comparação:</strong> {formatDate(comparisonRange.start)} a {formatDate(comparisonRange.end)}</span>
@@ -451,10 +431,48 @@ function AnalysisView({ posts, timeline }: { posts: InstagramPost[]; timeline: a
   const weekday = aggregateByWeekday(posts);
   const hourBands = aggregateByHourBand(posts);
   const distribution = aggregatePerformanceDistribution(posts);
+  const concentration = aggregateReachConcentration(posts);
+  const matrix = aggregatePerformanceMatrix(posts);
   const bestByIndex = [...posts].filter((post) => post.reachIndex).sort((a, b) => Number(b.reachIndex) - Number(a.reachIndex)).slice(0, 8);
+  const objectiveGroups = [
+    { title: "Descoberta", description: "Conteúdos que ampliam a distribuição.", icon: Eye, posts: [...posts].sort((a, b) => b.reach - a.reach).slice(0, 5), value: (post: InstagramPost) => formatCompactNumber(post.reach), metric: "alcance" },
+    { title: "Interesse", description: "Conteúdos que geram reação proporcional.", icon: Heart, posts: [...posts].sort((a, b) => b.engagementRate - a.engagementRate).slice(0, 5), value: (post: InstagramPost) => formatPercent(post.engagementRate), metric: "engajamento" },
+    { title: "Intenção", description: "Conteúdos que estimulam salvar ou compartilhar.", icon: Bookmark, posts: [...posts].sort((a, b) => (b.saves + b.shares) - (a.saves + a.shares)).slice(0, 5), value: (post: InstagramPost) => formatFullNumber(post.saves + post.shares), metric: "salv. + comp." },
+    { title: "Crescimento", description: "Conteúdos associados a novos seguidores.", icon: UserPlus, posts: [...posts].sort((a, b) => b.follows - a.follows).slice(0, 5), value: (post: InstagramPost) => formatFullNumber(post.follows), metric: "seguidores" }
+  ];
 
   return (
     <div className="mt-5 space-y-5">
+      <ChartFrame title="Média x mediana por formato" subtitle="A mediana mostra o resultado típico sem deixar poucos conteúdos virais dominarem a leitura.">
+        <TypePerformanceTable data={aggregateByType(posts)} />
+      </ChartFrame>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[.72fr_1.28fr]">
+        <ChartFrame title="Concentração do alcance" subtitle="Participação dos conteúdos líderes no alcance total do período.">
+          <div className="space-y-5 py-2">
+            {concentration.map((group, index) => (
+              <div key={group.label}>
+                <div className="mb-2 flex items-end justify-between gap-3">
+                  <div><div className="text-sm font-semibold text-paper">{group.label}</div><div className="text-xs text-white/40">{group.posts} posts · {formatCompactNumber(group.reach)} de alcance</div></div>
+                  <strong className={index === 0 ? "text-xl text-apex" : "text-lg text-paper"}>{formatPercent(group.share)}</strong>
+                </div>
+                <div className="h-2 overflow-hidden rounded-sm bg-white/[0.06]"><div className={index === 0 ? "h-full bg-apex" : "h-full bg-white/45"} style={{ width: `${Math.max(1, group.share * 100)}%` }} /></div>
+              </div>
+            ))}
+          </div>
+        </ChartFrame>
+
+        <ChartFrame title="Matriz alcance x engajamento" subtitle="As linhas tracejadas representam as medianas do período. O tamanho do ponto indica visualizações.">
+          <PerformanceMatrixChart data={matrix.points} reachMedian={matrix.reachMedian} engagementMedian={matrix.engagementMedian} />
+        </ChartFrame>
+      </div>
+
+      <ChartFrame title="Conteúdos por objetivo" subtitle="Rankings separados evitam tratar alcance, interesse, intenção e crescimento como a mesma meta.">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {objectiveGroups.map((group) => <ObjectiveCard key={group.title} {...group} />)}
+        </div>
+      </ChartFrame>
+
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <ChartFrame title="Performance por dia" subtitle="Médias calculadas por dia da semana de publicação.">
           <HorizontalBarChart data={weekday} dataKey="avgReach" name="Alcance médio" />
@@ -487,6 +505,43 @@ function AnalysisView({ posts, timeline }: { posts: InstagramPost[]; timeline: a
           ))}
         </div>
       </ChartFrame>
+
+      <ChartFrame title="Cobertura analítica" subtitle="O dashboard distingue métricas disponíveis de análises que dependem de novos campos.">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <CoverageCard available title="Performance editorial" fields="Alcance, visualizações, interações e seguidores" />
+          <CoverageCard title="Taxonomia editorial" fields="Campanha, tema, produto, CTA e creator" />
+          <CoverageCard title="Retenção de Reels" fields="Tempo assistido, retenção e conclusão" />
+          <CoverageCard title="Impacto no negócio" fields="Visitas, cliques, sessões, pedidos e receita" />
+        </div>
+      </ChartFrame>
     </div>
+  );
+}
+
+function ObjectiveCard({ title, description, icon: Icon, posts, value, metric }: { title: string; description: string; icon: typeof Eye; posts: InstagramPost[]; value: (post: InstagramPost) => string; metric: string }) {
+  return (
+    <section className="min-w-0 rounded-md border border-white/10 bg-white/[0.025] p-4">
+      <div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-md bg-apex/10 text-apex"><Icon size={17} /></span><div><h3 className="font-display text-sm font-black uppercase text-paper">{title}</h3><p className="mt-1 text-xs leading-5 text-white/42">{description}</p></div></div>
+      <div className="mt-4 space-y-2">
+        {posts.map((post, index) => (
+          <a key={post.id} href={post.permanentLink} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-md border border-transparent px-2 py-2 transition hover:border-white/10 hover:bg-white/[0.035]">
+            <span className="w-5 shrink-0 text-xs text-white/32">{index + 1}</span>
+            <span className="min-w-0 flex-1 truncate text-xs text-white/62">{post.description || post.postType}</span>
+            <span className="shrink-0 text-right"><strong className="block text-sm text-paper">{value(post)}</strong><span className="block text-[10px] text-white/32">{metric}</span></span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CoverageCard({ title, fields, available = false }: { title: string; fields: string; available?: boolean }) {
+  const Icon = available ? CheckCircle2 : CircleDashed;
+  return (
+    <section className="rounded-md border border-white/10 bg-white/[0.025] p-4">
+      <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-bold text-paper">{title}</h3><Icon size={17} className={available ? "text-emerald-300" : "text-apex"} /></div>
+      <p className="mt-3 text-xs leading-5 text-white/46">{fields}</p>
+      <div className={`mt-4 text-xs font-semibold uppercase tracking-[0.1em] ${available ? "text-emerald-300" : "text-apex"}`}>{available ? "Disponível" : "Pendente de dados"}</div>
+    </section>
   );
 }

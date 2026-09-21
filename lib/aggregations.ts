@@ -60,14 +60,51 @@ export function aggregateByType(posts: InstagramPost[]) {
         type,
         posts: items.length,
         avgReach: totals.avgReach,
+        medianReach: median(items.map((post) => post.reach)),
         avgViews: totals.avgViews,
         engagementRate: totals.engagementRate,
+        medianEngagementRate: median(items.map((post) => post.engagementRate)),
         shareRate: totals.shareRate,
         saveRate: totals.saveRate,
         avgFollows: safeRatio(totals.follows, items.length)
       };
     })
     .sort((a, b) => b.avgReach - a.avgReach);
+}
+
+export function aggregateReachConcentration(posts: InstagramPost[]) {
+  const sorted = [...posts].sort((a, b) => b.reach - a.reach);
+  const totalReach = sorted.reduce((sum, post) => sum + post.reach, 0);
+  const groups = [
+    { label: "Top 5", items: sorted.slice(0, 5) },
+    { label: "Top 6-10", items: sorted.slice(5, 10) },
+    { label: "Demais posts", items: sorted.slice(10) }
+  ];
+
+  return groups.map((group) => {
+    const reach = group.items.reduce((sum, post) => sum + post.reach, 0);
+    return { label: group.label, posts: group.items.length, reach, share: safeRatio(reach, totalReach) };
+  });
+}
+
+export function aggregatePerformanceMatrix(posts: InstagramPost[]) {
+  const reachMedian = median(posts.map((post) => post.reach));
+  const engagementMedian = median(posts.map((post) => post.engagementRate));
+  const points = posts.map((post) => ({
+    id: post.id,
+    reach: post.reach,
+    engagement: post.engagementRate,
+    views: post.views,
+    type: post.postType,
+    description: post.description,
+    link: post.permanentLink,
+    quadrant:
+      post.reach >= reachMedian
+        ? post.engagementRate >= engagementMedian ? "Destaques" : "Alcance"
+        : post.engagementRate >= engagementMedian ? "Profundidade" : "A desenvolver"
+  }));
+
+  return { points, reachMedian, engagementMedian };
 }
 
 export function aggregateByWeekday(posts: InstagramPost[]) {

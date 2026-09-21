@@ -57,3 +57,5 @@ export type DateRange = {
   start: string;
   end: string;
 };
+
+export type ComparisonMode = "none" | "previous" | "yearAgo";
