@@ -8,7 +8,8 @@ type ChartFrameProps = {
 
 export function ChartFrame({ title, subtitle, children }: ChartFrameProps) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-panel sm:p-5">
+    <section className="relative min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-panel sm:p-5">
+      <span className="absolute left-0 top-0 h-px w-16 bg-apex" aria-hidden="true" />
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <h2 className="break-words font-display text-base font-black uppercase text-paper sm:text-lg">{title}</h2>

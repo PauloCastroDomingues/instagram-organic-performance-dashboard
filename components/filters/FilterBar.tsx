@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronDown, GitCompareArrows, RefreshCw, Rows3 } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, GitCompareArrows, Rows3 } from "lucide-react";
 import type { ComparisonMode, DateRange } from "@/lib/types";
 
 type FilterBarProps = {
@@ -154,11 +154,6 @@ export function FilterBar({ range, availableRange, comparisonMode, postType, pos
         </select>
         <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/42" />
       </label>
-
-      <button type="button" className="flex h-11 items-center justify-center gap-2 rounded-md border border-apex/45 bg-apex/10 px-4 text-sm font-semibold text-paper transition hover:bg-apex hover:text-pneu" onClick={() => window.location.reload()}>
-        <RefreshCw size={16} />
-        <span className="hidden sm:inline">Atualizar</span>
-      </button>
 
       <div className="ml-auto hidden text-right xl:block">
         <div className="text-[10px] uppercase tracking-[0.14em] text-white/32">Intervalo ativo</div>

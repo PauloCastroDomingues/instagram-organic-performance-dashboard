@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, Eye, FileText, Heart, Search, UserPlus } from "lucide-react";
+import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, ExternalLink, Eye, FileText, Heart, RefreshCw, Search, UserPlus } from "lucide-react";
 import type { ComparisonMode, DateRange, InstagramPost, MetricKey } from "@/lib/types";
 import { formatCompactNumber, formatDate, formatDecimal, formatFullNumber, formatPercent } from "@/lib/format";
 import { filterPosts, chooseAggregationMode, aggregateTimeline, aggregateByType, aggregateByWeekday, aggregateByHourBand, aggregatePerformanceDistribution, aggregateReachConcentration, aggregatePerformanceMatrix } from "@/lib/aggregations";
@@ -30,6 +30,8 @@ const metricLabels: Record<MetricKey, string> = {
   interactions: "Interações",
   follows: "Seguidores ganhos"
 };
+
+const SOURCE_SHEET_URL = "https://docs.google.com/spreadsheets/d/10wKKS6BEWh0x-calS693AshC9TgYId_sH3pO3C7BkL0/edit?gid=0#gid=0";
 
 function getDefaultRange(posts: InstagramPost[]): DateRange {
   const timestamps = posts.map((post) => new Date(post.publishedAt).getTime()).sort((a, b) => a - b);
@@ -76,10 +78,33 @@ export function Dashboard({ posts }: DashboardProps) {
             Análise de publicações com dados normalizados e comparação entre períodos equivalentes.
           </p>
         </div>
-        <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-left lg:w-auto lg:min-w-[140px] lg:text-right">
-          <div className="text-xs uppercase tracking-[0.14em] text-white/42">Base atual</div>
-          <div className="mt-1 text-2xl font-black text-paper">{formatFullNumber(posts.length)}</div>
-          <div className="text-xs text-white/48">posts únicos</div>
+        <div className="flex w-full flex-col gap-2 lg:w-auto lg:items-end">
+          <div className="flex w-full flex-wrap gap-2 lg:justify-end">
+            <button
+              type="button"
+              className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-white/62 transition hover:border-apex/45 hover:text-paper"
+              title="Recarrega os dados disponíveis nesta versão. A sincronização automática será ativada com a API."
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCw size={14} />
+              Atualizar dados
+            </button>
+            <a
+              className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-white/62 transition hover:border-apex/45 hover:text-paper"
+              href={SOURCE_SHEET_URL}
+              target="_blank"
+              rel="noreferrer"
+              title="Abre a planilha usada como fonte dos dados"
+            >
+              <ExternalLink size={14} />
+              Abrir base
+            </a>
+          </div>
+          <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-left lg:min-w-[170px] lg:text-right">
+            <div className="text-xs uppercase tracking-[0.14em] text-white/42">Base atual</div>
+            <div className="mt-1 text-2xl font-black text-paper">{formatFullNumber(posts.length)}</div>
+            <div className="text-xs text-white/48">posts únicos</div>
+          </div>
         </div>
       </header>
 
