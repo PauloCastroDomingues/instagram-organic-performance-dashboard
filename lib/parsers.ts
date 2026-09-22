@@ -5,6 +5,10 @@ export function parseNumber(value: unknown): number {
   if (value === null || value === undefined) return 0;
   const raw = String(value).trim();
   if (!raw) return 0;
+  if (/^-?\d+\.\d+$/.test(raw) && !raw.includes(",")) {
+    const decimal = Number(raw);
+    return Number.isFinite(decimal) ? decimal : 0;
+  }
   const normalized = raw
     .replace(/\s/g, "")
     .replace(/\./g, "")

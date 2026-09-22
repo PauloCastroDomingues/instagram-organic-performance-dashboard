@@ -148,6 +148,7 @@ function MatrixTooltip({ active, payload }: any) {
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/58">{point.description || "Sem descrição"}</p>
       <div className="mt-2 flex justify-between gap-5 text-white/72"><span>Alcance</span><strong className="text-paper">{formatFullNumber(point.reach)}</strong></div>
       <div className="flex justify-between gap-5 text-white/72"><span>Engajamento</span><strong className="text-paper">{formatPercent(point.engagement)}</strong></div>
+      <div className="mt-2 border-t border-white/8 pt-2 text-[11px] font-semibold text-apex">Clique no ponto para abrir o conteúdo</div>
     </div>
   );
 }
@@ -173,7 +174,20 @@ export function PerformanceMatrixChart({ data, reachMedian, engagementMedian }: 
           <ReferenceLine y={engagementMedian} stroke="rgba(244,244,244,.28)" strokeDasharray="4 4" />
           <Tooltip content={<MatrixTooltip />} />
           <Legend content={<CleanLegend />} />
-          {groups.map((group) => <Scatter key={group.quadrant} name={group.quadrant} data={group.points} fill={colors[group.quadrant]} opacity={0.84} />)}
+          {groups.map((group) => (
+            <Scatter
+              key={group.quadrant}
+              name={group.quadrant}
+              data={group.points}
+              fill={colors[group.quadrant]}
+              opacity={0.84}
+              cursor="pointer"
+              onClick={(point: any) => {
+                const link = point?.link ?? point?.payload?.link;
+                if (link) window.open(link, "_blank", "noopener,noreferrer");
+              }}
+            />
+          ))}
         </ScatterChart>
       </ResponsiveContainer>
     </div>

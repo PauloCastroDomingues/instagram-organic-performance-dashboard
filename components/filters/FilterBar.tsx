@@ -13,6 +13,7 @@ type FilterBarProps = {
   onRangeChange: (range: DateRange) => void;
   onComparisonModeChange: (mode: ComparisonMode) => void;
   onPostTypeChange: (postType: string) => void;
+  contentLabel?: string;
 };
 
 type PeriodPreset = { label: string; description: string; range: DateRange };
@@ -62,7 +63,7 @@ function formatShortDate(value: string) {
 
 const controlClass = "flex h-11 min-w-0 items-center justify-between gap-3 rounded-md border border-white/12 bg-white/[0.045] px-3 text-sm font-semibold text-paper transition hover:border-white/25 hover:bg-white/[0.065] focus:outline-none focus-visible:border-apex";
 
-export function FilterBar({ range, availableRange, comparisonMode, postType, postTypes, onRangeChange, onComparisonModeChange, onPostTypeChange }: FilterBarProps) {
+export function FilterBar({ range, availableRange, comparisonMode, postType, postTypes, onRangeChange, onComparisonModeChange, onPostTypeChange, contentLabel = "Todos os conteúdos" }: FilterBarProps) {
   const periodRef = useRef<HTMLDetailsElement>(null);
   const comparisonRef = useRef<HTMLDetailsElement>(null);
   const [draftRange, setDraftRange] = useState(range);
@@ -149,7 +150,7 @@ export function FilterBar({ range, availableRange, comparisonMode, postType, pos
       <label className="relative min-w-[190px] flex-1 sm:flex-none">
         <Rows3 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/52" />
         <select aria-label="Tipo de conteúdo" className={`${controlClass} w-full cursor-pointer appearance-none pl-10 pr-9`} value={postType} onChange={(event) => onPostTypeChange(event.target.value)}>
-          <option value="Todos">Todos os conteúdos</option>
+          <option value="Todos">{contentLabel}</option>
           {postTypes.map((type) => <option key={type}>{type}</option>)}
         </select>
         <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/42" />

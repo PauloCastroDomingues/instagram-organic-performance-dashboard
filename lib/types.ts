@@ -59,3 +59,26 @@ export type DateRange = {
 };
 
 export type ComparisonMode = "none" | "previous" | "yearAgo";
+
+export type SourceInstagramStoryRow = Record<string, string>;
+
+export type InstagramStory = {
+  id: string;
+  description: string;
+  publishedAt: string;
+  permanentLink: string;
+  views: number;
+  reach: number;
+  likes: number;
+  shares: number;
+  profileVisits: number;
+  replies: number;
+  linkClicks: number;
+  navigation: number;
+  follows: number;
+  stickerTaps: number;
+  actions: number;
+  reachRate: number;
+  actionRate: number;
+  navigationRate: number;
+};

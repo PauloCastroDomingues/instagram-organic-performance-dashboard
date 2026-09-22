@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, ExternalLink, Eye, FileText, Heart, RefreshCw, Search, UserPlus } from "lucide-react";
-import type { ComparisonMode, DateRange, InstagramPost, MetricKey } from "@/lib/types";
+import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, ExternalLink, Eye, FileText, Heart, Images, RefreshCw, Search, UserPlus } from "lucide-react";
+import type { ComparisonMode, DateRange, InstagramPost, InstagramStory, MetricKey } from "@/lib/types";
 import { formatCompactNumber, formatDate, formatDecimal, formatFullNumber, formatPercent } from "@/lib/format";
 import { filterPosts, chooseAggregationMode, aggregateTimeline, aggregateByType, aggregateByWeekday, aggregateByHourBand, aggregatePerformanceDistribution, aggregateReachConcentration, aggregatePerformanceMatrix } from "@/lib/aggregations";
 import { getPostsInRange, getPreviousPeriodRange, getYearAgoPeriodRange, sumPosts, variation } from "@/lib/metrics";
@@ -11,9 +11,11 @@ import { FilterBar } from "@/components/filters/FilterBar";
 import { KpiCard } from "@/components/cards/KpiCard";
 import { ChartFrame } from "@/components/charts/ChartFrame";
 import { HorizontalBarChart, PerformanceMatrixChart, TimelineChart, TypePerformanceTable, VolumeReachChart } from "@/components/charts/Charts";
+import { StoriesDashboard } from "@/components/StoriesDashboard";
 
 type DashboardProps = {
   posts: InstagramPost[];
+  stories: InstagramStory[];
 };
 
 type ViewKey = "overview" | "content" | "analysis";
@@ -41,13 +43,14 @@ function getDefaultRange(posts: InstagramPost[]): DateRange {
   };
 }
 
-export function Dashboard({ posts }: DashboardProps) {
+export function Dashboard({ posts, stories }: DashboardProps) {
   const availableRange = useMemo(() => getDefaultRange(posts), [posts]);
   const [view, setView] = useState<ViewKey>("overview");
   const [metric, setMetric] = useState<MetricKey>("reach");
   const [range, setRange] = useState<DateRange>(() => getDefaultRange(posts));
   const [postType, setPostType] = useState("Todos");
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("previous");
+  const [contentSource, setContentSource] = useState<"posts" | "stories">("posts");
 
   const postTypes = useMemo(() => Array.from(new Set(posts.map((post) => post.postType))).sort(), [posts]);
   const filteredPosts = useMemo(() => filterPosts(posts, range.start, range.end, postType), [posts, range, postType]);
@@ -102,11 +105,23 @@ export function Dashboard({ posts }: DashboardProps) {
           </div>
           <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-left lg:min-w-[170px] lg:text-right">
             <div className="text-xs uppercase tracking-[0.14em] text-white/42">Base atual</div>
-            <div className="mt-1 text-2xl font-black text-paper">{formatFullNumber(posts.length)}</div>
-            <div className="text-xs text-white/48">posts únicos</div>
+            <div className="mt-1 text-2xl font-black text-paper">{formatFullNumber(contentSource === "posts" ? posts.length : stories.length)}</div>
+            <div className="text-xs text-white/48">{contentSource === "posts" ? "posts únicos" : "stories únicos"}</div>
           </div>
         </div>
       </header>
+
+      <div className="mb-4 inline-flex w-full rounded-lg border border-white/10 bg-white/[0.045] p-1 sm:w-auto">
+        <button type="button" onClick={() => setContentSource("posts")} className={clsx("flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none", contentSource === "posts" ? "bg-apex text-pneu" : "text-white/58 hover:bg-white/[0.06] hover:text-paper")}>
+          <FileText size={16} /> Posts
+        </button>
+        <button type="button" onClick={() => setContentSource("stories")} className={clsx("flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none", contentSource === "stories" ? "bg-apex text-pneu" : "text-white/58 hover:bg-white/[0.06] hover:text-paper")}>
+          <Images size={16} /> Stories
+        </button>
+      </div>
+
+      {contentSource === "stories" ? <StoriesDashboard stories={stories} /> : (
+      <>
 
       <div className="mb-5 min-w-0 overflow-x-auto pb-1">
         <nav className="flex w-max min-w-full rounded-lg border border-white/10 bg-white/[0.045] p-1 sm:min-w-0">
@@ -146,6 +161,8 @@ export function Dashboard({ posts }: DashboardProps) {
       ) : null}
       {view === "content" ? <ContentView posts={filteredPosts} /> : null}
       {view === "analysis" ? <AnalysisView posts={filteredPosts} timeline={timeline} /> : null}
+      </>
+      )}
     </main>
   );
 }
@@ -487,7 +504,7 @@ function AnalysisView({ posts, timeline }: { posts: InstagramPost[]; timeline: a
           </div>
         </ChartFrame>
 
-        <ChartFrame title="Matriz alcance x engajamento" subtitle="As linhas tracejadas representam as medianas do período. O tamanho do ponto indica visualizações.">
+        <ChartFrame title="Matriz alcance x engajamento" subtitle="As linhas tracejadas representam as medianas do período. O tamanho do ponto indica visualizações." tooltip="Cada ponto representa um post do período filtrado. Passe o cursor para ver os dados e clique no ponto para abrir o conteúdo no Instagram.">
           <PerformanceMatrixChart data={matrix.points} reachMedian={matrix.reachMedian} engagementMedian={matrix.engagementMedian} />
         </ChartFrame>
       </div>
