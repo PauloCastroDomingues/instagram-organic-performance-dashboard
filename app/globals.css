@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Formula1 Display";
+  src: url("/fonts/Formula1-Regular.ttf") format("truetype");
+  font-display: swap;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Formula1 Display";
+  src: url("/fonts/Formula1-Bold.ttf") format("truetype");
+  font-display: swap;
+  font-weight: 700 900;
+}
+
 :root {
   color-scheme: dark;
   background: #1d1d1b;
@@ -14,18 +28,34 @@
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    linear-gradient(135deg, rgba(251, 93, 6, 0.1), transparent 26%),
-    radial-gradient(circle at 80% 0%, rgba(244, 244, 244, 0.06), transparent 30%),
-    #1d1d1b;
+  background: #1d1d1b;
   color: #f4f4f4;
   font-family: Inter, Arial, sans-serif;
   letter-spacing: 0;
 }
 
+body::before {
+  background: linear-gradient(90deg, #fb5d06 0 5%, #f4f4f4 5% 15%, #3f3a38 15% 25%, transparent 25%);
+  content: "";
+  height: 2px;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 100;
+}
+
 html,
 body {
   overflow-x: hidden;
+}
+
+.dashboard-shell {
+  flex: 1;
+  min-width: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  width: auto;
 }
 
 img,
@@ -47,6 +77,11 @@ select {
 select option {
   background-color: #242320;
   color: #f4f4f4;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.55;
 }
 
 ::selection {

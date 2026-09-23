@@ -12,10 +12,10 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["Inter", "Arial", "sans-serif"],
-        display: ["Arial Black", "Inter", "Arial", "sans-serif"]
+        display: ["Formula1 Display", "Arial Black", "Inter", "Arial", "sans-serif"]
       },
       boxShadow: {
-        panel: "0 18px 60px rgba(0, 0, 0, 0.28)"
+        panel: "0 12px 32px rgba(0, 0, 0, 0.2)"
       }
     }
   },

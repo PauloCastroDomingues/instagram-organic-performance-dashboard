@@ -1,21 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import { Activity, BarChart3, Bookmark, CheckCircle2, CircleDashed, ExternalLink, Eye, FileText, Heart, Images, RefreshCw, Search, UserPlus } from "lucide-react";
-import type { ComparisonMode, DateRange, InstagramPost, InstagramStory, MetricKey } from "@/lib/types";
+import { Activity, BarChart3, Bookmark, Braces, CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, ExternalLink, Eye, FileText, Gauge, Heart, Images, RefreshCw, Search, UserPlus } from "lucide-react";
+import type { ComparisonMode, DateRange, InstagramPost, InstagramStory, MetricKey, SocialDataResult } from "@/lib/types";
 import { formatCompactNumber, formatDate, formatDecimal, formatFullNumber, formatPercent } from "@/lib/format";
 import { filterPosts, chooseAggregationMode, aggregateTimeline, aggregateByType, aggregateByWeekday, aggregateByHourBand, aggregatePerformanceDistribution, aggregateReachConcentration, aggregatePerformanceMatrix } from "@/lib/aggregations";
-import { getPostsInRange, getPreviousPeriodRange, getYearAgoPeriodRange, sumPosts, variation } from "@/lib/metrics";
+import { getPostsInRange, getPreviousMonthPeriodRange, getPreviousPeriodRange, getYearAgoPeriodRange, sumPosts, variation } from "@/lib/metrics";
 import { FilterBar } from "@/components/filters/FilterBar";
 import { KpiCard } from "@/components/cards/KpiCard";
 import { ChartFrame } from "@/components/charts/ChartFrame";
 import { HorizontalBarChart, PerformanceMatrixChart, TimelineChart, TypePerformanceTable, VolumeReachChart } from "@/components/charts/Charts";
 import { StoriesDashboard } from "@/components/StoriesDashboard";
+import { SocialOverview } from "@/components/SocialOverview";
+import { GlobalDateFilter } from "@/components/filters/GlobalDateFilter";
 
 type DashboardProps = {
   posts: InstagramPost[];
   stories: InstagramStory[];
+  socialData: SocialDataResult;
 };
 
 type ViewKey = "overview" | "content" | "analysis";
@@ -43,14 +46,56 @@ function getDefaultRange(posts: InstagramPost[]): DateRange {
   };
 }
 
-export function Dashboard({ posts, stories }: DashboardProps) {
-  const availableRange = useMemo(() => getDefaultRange(posts), [posts]);
+function getGlobalAvailableRange(posts: InstagramPost[], stories: InstagramStory[], socialData: SocialDataResult): DateRange {
+  const dates = [
+    ...posts.map((post) => post.publishedAt.slice(0, 10)),
+    ...stories.map((story) => story.publishedAt.slice(0, 10)),
+    ...(socialData.status === "ready" ? socialData.data.sessionsDaily.map((day) => day.date) : [])
+  ].filter(Boolean).sort();
+  return { start: dates[0] ?? "", end: dates.at(-1) ?? "" };
+}
+
+function getInitialGlobalRange(available: DateRange): DateRange {
+  const end = new Date(`${available.end}T12:00:00`);
+  const startValue = new Date(end.getFullYear(), end.getMonth(), 1, 12).toISOString().slice(0, 10);
+  return { start: startValue < available.start ? available.start : startValue, end: available.end };
+}
+
+export function Dashboard({ posts, stories, socialData }: DashboardProps) {
+  const availableRange = useMemo(() => getGlobalAvailableRange(posts, stories, socialData), [posts, stories, socialData]);
   const [view, setView] = useState<ViewKey>("overview");
   const [metric, setMetric] = useState<MetricKey>("reach");
-  const [range, setRange] = useState<DateRange>(() => getDefaultRange(posts));
+  const [range, setRange] = useState<DateRange>(() => getInitialGlobalRange(getGlobalAvailableRange(posts, stories, socialData)));
   const [postType, setPostType] = useState("Todos");
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("previous");
-  const [contentSource, setContentSource] = useState<"posts" | "stories">("posts");
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("previousMonth");
+  const [contentSource, setContentSource] = useState<"traffic" | "posts" | "stories">("traffic");
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [urlReady, setUrlReady] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get("view");
+    const compare = params.get("compare");
+    const start = params.get("start");
+    const end = params.get("end");
+    if (source === "traffic" || source === "posts" || source === "stories") setContentSource(source);
+    if (compare === "none" || compare === "previous" || compare === "previousMonth" || compare === "yearAgo") setComparisonMode(compare);
+    if (start && end && start >= availableRange.start && end <= availableRange.end && start <= end) setRange({ start, end });
+    const type = params.get("type");
+    if (type) setPostType(type);
+    setUrlReady(true);
+  }, [availableRange]);
+
+  useEffect(() => {
+    if (!urlReady) return;
+    const params = new URLSearchParams();
+    params.set("view", contentSource);
+    params.set("start", range.start);
+    params.set("end", range.end);
+    params.set("compare", comparisonMode);
+    if (contentSource === "posts" && postType !== "Todos") params.set("type", postType);
+    window.history.replaceState(null, "", `${window.location.pathname}?${params.toString()}`);
+  }, [comparisonMode, contentSource, postType, range, urlReady]);
 
   const postTypes = useMemo(() => Array.from(new Set(posts.map((post) => post.postType))).sort(), [posts]);
   const filteredPosts = useMemo(() => filterPosts(posts, range.start, range.end, postType), [posts, range, postType]);
@@ -58,7 +103,7 @@ export function Dashboard({ posts, stories }: DashboardProps) {
   const comparisonRange = useMemo(() => {
     const start = new Date(`${range.start}T00:00:00`);
     const end = new Date(`${range.end}T23:59:59`);
-    return comparisonMode === "yearAgo" ? getYearAgoPeriodRange(start, end) : getPreviousPeriodRange(start, end);
+    return comparisonMode === "yearAgo" ? getYearAgoPeriodRange(start, end) : comparisonMode === "previousMonth" ? getPreviousMonthPeriodRange(start, end) : getPreviousPeriodRange(start, end);
   }, [range, comparisonMode]);
   const comparisonTotals = useMemo(() => {
     const comparisonPosts = getPostsInRange(posts, comparisonRange.start, comparisonRange.end);
@@ -70,69 +115,85 @@ export function Dashboard({ posts, stories }: DashboardProps) {
   const typePerformance = useMemo(() => aggregateByType(filteredPosts), [filteredPosts]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-      <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+    <div className="flex min-h-screen">
+      <aside className={clsx("fixed inset-y-0 left-0 z-40 flex flex-col border-r border-white/12 bg-[#191918] px-1.5 py-5 transition-[width] duration-200 sm:px-2", sidebarExpanded ? "w-[218px] px-4" : "w-[54px] sm:w-[68px]")} aria-label="Navegação principal">
+        <div className="flex items-center gap-2">
+          <div className={clsx("flex h-11 flex-1 items-center border border-white/14 font-display text-sm font-bold text-paper", sidebarExpanded ? "justify-start px-3" : "justify-center")}>R<span className={clsx(!sidebarExpanded && "hidden")}>EISE</span><span className="ml-1 text-apex">.</span></div>
+          {sidebarExpanded ? <button type="button" onClick={() => setSidebarExpanded(false)} className="flex size-9 shrink-0 items-center justify-center border border-white/10 text-white/45 hover:border-apex hover:text-paper" title="Recolher menu" aria-label="Recolher menu"><ChevronLeft size={17} /></button> : null}
+        </div>
+        <div className="mt-8 space-y-2">
+          <SideNavButton active={contentSource === "traffic"} expanded={sidebarExpanded} label="Visão geral" icon={Gauge} onClick={() => setContentSource("traffic")} />
+          <SideNavButton active={contentSource === "posts"} expanded={sidebarExpanded} label="Posts" icon={FileText} onClick={() => setContentSource("posts")} />
+          <SideNavButton active={contentSource === "stories"} expanded={sidebarExpanded} label="Stories" icon={Images} onClick={() => setContentSource("stories")} />
+        </div>
+        <div className="mt-auto border-t border-white/10 pt-4">
+          {sidebarExpanded ? <div className="text-left text-[9px] font-bold uppercase leading-4 text-white/28">Social<br />Intelligence</div> : <div className="mx-auto size-1 bg-apex/60" aria-hidden="true" />}
+        </div>
+        {!sidebarExpanded ? <button type="button" onClick={() => setSidebarExpanded(true)} className="mt-4 flex h-10 items-center justify-center border border-white/10 text-white/45 hover:border-apex hover:text-paper" title="Expandir menu" aria-label="Expandir menu"><ChevronRight size={17} /></button> : null}
+      </aside>
+    <main className={clsx("dashboard-shell min-h-screen max-w-[1560px] overflow-x-clip py-6 transition-[margin] duration-200 sm:px-7 lg:px-10 lg:py-9", sidebarExpanded ? "ml-[54px] sm:ml-[218px]" : "ml-[54px] sm:ml-[68px]")}>
+      <header className="mb-8 flex flex-col gap-6 border-b border-white/12 pb-7 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-md border border-apex/35 bg-apex/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-apex">
-            Reise Social
-          </div>
-          <h1 className="break-words font-display text-2xl font-black uppercase leading-tight text-paper sm:text-3xl lg:text-4xl">Performance orgânica no Instagram</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/56">
-            Análise de publicações com dados normalizados e comparação entre períodos equivalentes.
+          <div className="mb-4 flex items-center gap-3 text-[11px] font-bold uppercase text-apex"><span className="h-px w-10 bg-apex" /> Reise Social Intelligence</div>
+          <h1 className="max-w-full font-display text-xl font-bold uppercase leading-tight text-paper sm:text-3xl lg:text-[38px]"><span className="block sm:inline">Performance no</span><span className="block sm:ml-2 sm:inline">Instagram</span></h1>
+          <p className="mt-3 max-w-[calc(100vw-2rem)] break-words text-sm leading-6 text-white/52 sm:max-w-3xl">
+            Alcance, tráfego e eficiência de mídia em uma leitura executiva da página.
           </p>
         </div>
-        <div className="flex w-full flex-col gap-2 lg:w-auto lg:items-end">
+        <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
           <div className="flex w-full flex-wrap gap-2 lg:justify-end">
             <button
               type="button"
-              className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-white/62 transition hover:border-apex/45 hover:text-paper"
+              className="flex h-9 items-center gap-2 border-b border-white/18 px-2 text-xs font-semibold text-white/62 transition hover:border-apex hover:text-paper"
               title="Recarrega os dados disponíveis nesta versão. A sincronização automática será ativada com a API."
               onClick={() => window.location.reload()}
             >
               <RefreshCw size={14} />
-              Atualizar dados
+              <span className="max-[480px]:hidden">Atualizar dados</span>
             </button>
             <a
-              className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-white/62 transition hover:border-apex/45 hover:text-paper"
+              className="flex h-9 items-center gap-2 border-b border-white/18 px-2 text-xs font-semibold text-white/62 transition hover:border-apex hover:text-paper"
               href={SOURCE_SHEET_URL}
               target="_blank"
               rel="noreferrer"
               title="Abre a planilha usada como fonte dos dados"
             >
               <ExternalLink size={14} />
-              Abrir base
+              <span className="max-[480px]:hidden">Abrir base</span>
+            </a>
+            <a
+              className="flex h-9 items-center gap-2 border-b border-white/18 px-2 text-xs font-semibold text-white/62 transition hover:border-apex hover:text-paper"
+              href={`/api/dashboard?start=${range.start}&end=${range.end}&compare=${comparisonMode}`}
+              target="_blank"
+              rel="noreferrer"
+              title="Abre os dados estruturados do período para leitura por inteligência artificial"
+            >
+              <Braces size={14} /> <span className="max-[480px]:hidden">Dados para IA</span>
             </a>
           </div>
-          <div className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-left lg:min-w-[170px] lg:text-right">
-            <div className="text-xs uppercase tracking-[0.14em] text-white/42">Base atual</div>
-            <div className="mt-1 text-2xl font-black text-paper">{formatFullNumber(contentSource === "posts" ? posts.length : stories.length)}</div>
-            <div className="text-xs text-white/48">{contentSource === "posts" ? "posts únicos" : "stories únicos"}</div>
+          <div className="w-full border-l-2 border-apex pl-3 text-left lg:min-w-[170px] lg:text-right">
+            <div className="text-[10px] font-bold uppercase text-white/38">Fonte ativa</div>
+            <div className="mt-1 font-display text-lg font-bold text-paper">{contentSource === "traffic" ? "SSOT" : formatFullNumber(contentSource === "posts" ? posts.length : stories.length)}</div>
+            <div className="text-xs text-white/44">{contentSource === "traffic" ? "BigQuery + Meta" : contentSource === "posts" ? "posts únicos" : "stories únicos"}</div>
           </div>
         </div>
       </header>
 
-      <div className="mb-4 inline-flex w-full rounded-lg border border-white/10 bg-white/[0.045] p-1 sm:w-auto">
-        <button type="button" onClick={() => setContentSource("posts")} className={clsx("flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none", contentSource === "posts" ? "bg-apex text-pneu" : "text-white/58 hover:bg-white/[0.06] hover:text-paper")}>
-          <FileText size={16} /> Posts
-        </button>
-        <button type="button" onClick={() => setContentSource("stories")} className={clsx("flex h-10 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none", contentSource === "stories" ? "bg-apex text-pneu" : "text-white/58 hover:bg-white/[0.06] hover:text-paper")}>
-          <Images size={16} /> Stories
-        </button>
-      </div>
+      <GlobalDateFilter range={range} availableRange={availableRange} mode={comparisonMode} onRangeChange={setRange} onModeChange={setComparisonMode} />
 
-      {contentSource === "stories" ? <StoriesDashboard stories={stories} /> : (
+      {contentSource === "traffic" ? <SocialOverview result={socialData} posts={posts} stories={stories} range={range} mode={comparisonMode} /> : contentSource === "stories" ? <StoriesDashboard stories={stories} range={range} comparisonMode={comparisonMode} /> : (
       <>
 
       <div className="mb-5 min-w-0 overflow-x-auto pb-1">
-        <nav className="flex w-max min-w-full rounded-lg border border-white/10 bg-white/[0.045] p-1 sm:min-w-0">
+        <nav className="flex w-max min-w-full border-b border-white/12 sm:min-w-0">
           {views.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.key}
                 className={clsx(
-                  "flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3 text-sm font-semibold transition sm:flex-none sm:px-4",
-                  view === item.key ? "bg-apex text-pneu" : "text-white/58 hover:bg-white/[0.06] hover:text-paper"
+                  "flex h-10 flex-1 items-center justify-center gap-2 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition sm:flex-none sm:px-4",
+                  view === item.key ? "border-apex text-paper" : "border-transparent text-white/52 hover:text-paper"
                 )}
                 onClick={() => setView(item.key)}
               >
@@ -144,7 +205,7 @@ export function Dashboard({ posts, stories }: DashboardProps) {
         </nav>
       </div>
 
-      <FilterBar range={range} availableRange={availableRange} comparisonMode={comparisonMode} postType={postType} postTypes={postTypes} onRangeChange={setRange} onComparisonModeChange={setComparisonMode} onPostTypeChange={setPostType} />
+      <FilterBar range={range} availableRange={availableRange} comparisonMode={comparisonMode} postType={postType} postTypes={postTypes} onRangeChange={setRange} onComparisonModeChange={setComparisonMode} onPostTypeChange={setPostType} hideDateControls />
 
       {view === "overview" ? (
         <Overview
@@ -164,7 +225,12 @@ export function Dashboard({ posts, stories }: DashboardProps) {
       </>
       )}
     </main>
+    </div>
   );
+}
+
+function SideNavButton({ active, expanded, label, icon: Icon, onClick }: { active: boolean; expanded: boolean; label: string; icon: typeof Gauge; onClick: () => void }) {
+  return <button type="button" onClick={onClick} title={label} aria-current={active ? "page" : undefined} className={clsx("relative flex h-12 w-full items-center gap-3 border-l-2 text-sm font-bold transition", expanded ? "justify-start px-3" : "justify-center", active ? "border-apex bg-white/[0.06] text-paper" : "border-transparent text-white/38 hover:bg-white/[0.03] hover:text-paper")}><Icon size={18} className={active ? "text-apex" : "text-white/36"} />{expanded ? <span>{label}</span> : null}</button>;
 }
 
 function Overview({
@@ -202,7 +268,7 @@ function Overview({
     <div className="mt-5 space-y-5">
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {kpis.map(([label, value, delta]) => (
-          <KpiCard key={label} label={label} value={value} variation={delta} showVariation={comparisonMode !== "none"} helper={comparisonMode === "none" ? "Período selecionado" : comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior"} />
+          <KpiCard key={label} label={label} value={value} variation={delta} showVariation={comparisonMode !== "none"} helper={comparisonMode === "none" ? "Período selecionado" : comparisonMode === "previousMonth" ? "vs. mesmos dias do mês anterior" : comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior"} />
         ))}
       </section>
 
@@ -263,7 +329,7 @@ function PeriodComparison({
   return (
     <ChartFrame
       title="Comparação entre períodos"
-      subtitle={comparisonMode === "previous" ? "Compara com o intervalo imediatamente anterior, de mesma duração." : "Compara com as mesmas datas do ano anterior."}
+      subtitle={comparisonMode === "previousMonth" ? "Compara com os mesmos dias do mês anterior." : comparisonMode === "previous" ? "Compara com o intervalo imediatamente anterior, de mesma duração." : "Compara com as mesmas datas do ano anterior."}
     >
       <div className="mb-4 grid grid-cols-1 gap-2 rounded-md bg-white/[0.035] p-3 text-xs text-white/52 sm:grid-cols-2 md:hidden">
         <span><strong className="text-paper">Atual:</strong> {formatDate(range.start)} a {formatDate(range.end)}</span>

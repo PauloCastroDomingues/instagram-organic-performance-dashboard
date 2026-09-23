@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ExternalLink } from "lucide-react";
 import type { ComparisonMode, DateRange, InstagramStory } from "@/lib/types";
 import { formatCompactNumber, formatDate, formatFullNumber, formatPercent } from "@/lib/format";
-import { getPreviousPeriodRange, getYearAgoPeriodRange, safeRatio, variation } from "@/lib/metrics";
-import { FilterBar } from "@/components/filters/FilterBar";
+import { getPreviousMonthPeriodRange, getPreviousPeriodRange, getYearAgoPeriodRange, safeRatio, variation } from "@/lib/metrics";
 import { KpiCard } from "@/components/cards/KpiCard";
 import { ChartFrame } from "@/components/charts/ChartFrame";
 import { HorizontalBarChart, TimelineChart } from "@/components/charts/Charts";
@@ -61,21 +60,18 @@ function actionBreakdown(stories: InstagramStory[]) {
   ];
 }
 
-export function StoriesDashboard({ stories }: { stories: InstagramStory[] }) {
-  const availableRange = useMemo(() => defaultRange(stories), [stories]);
-  const [range, setRange] = useState<DateRange>(() => defaultRange(stories));
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("previous");
+export function StoriesDashboard({ stories, range, comparisonMode }: { stories: InstagramStory[]; range: DateRange; comparisonMode: ComparisonMode }) {
   const filtered = useMemo(() => stories.filter((story) => inRange(story, range)), [stories, range]);
   const current = useMemo(() => totals(filtered), [filtered]);
   const comparisonRange = useMemo(() => {
     const start = new Date(`${range.start}T00:00:00`);
     const end = new Date(`${range.end}T23:59:59`);
-    const result = comparisonMode === "yearAgo" ? getYearAgoPeriodRange(start, end) : getPreviousPeriodRange(start, end);
+    const result = comparisonMode === "yearAgo" ? getYearAgoPeriodRange(start, end) : comparisonMode === "previousMonth" ? getPreviousMonthPeriodRange(start, end) : getPreviousPeriodRange(start, end);
     return { start: result.start.toISOString().slice(0, 10), end: result.end.toISOString().slice(0, 10) };
   }, [range, comparisonMode]);
   const previous = useMemo(() => totals(stories.filter((story) => inRange(story, comparisonRange))), [stories, comparisonRange]);
   const showVariation = comparisonMode !== "none";
-  const helper = comparisonMode === "none" ? "Período selecionado" : comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior";
+  const helper = comparisonMode === "none" ? "Período selecionado" : comparisonMode === "previousMonth" ? "vs. mesmos dias do mês anterior" : comparisonMode === "previous" ? "vs. período anterior equivalente" : "vs. mesmo período do ano anterior";
   const topStories = [...filtered].sort((a, b) => b.reach - a.reach).slice(0, 10);
 
   const cards = [
@@ -90,8 +86,6 @@ export function StoriesDashboard({ stories }: { stories: InstagramStory[] }) {
 
   return (
     <div>
-      <FilterBar range={range} availableRange={availableRange} comparisonMode={comparisonMode} postType="Todos" postTypes={[]} contentLabel="Todos os stories" onRangeChange={setRange} onComparisonModeChange={setComparisonMode} onPostTypeChange={() => undefined} />
-
       <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
         {cards.map(([label, value, delta]) => <KpiCard key={label} label={label} value={value} variation={showVariation ? delta : undefined} showVariation={showVariation} helper={helper} />)}
       </section>

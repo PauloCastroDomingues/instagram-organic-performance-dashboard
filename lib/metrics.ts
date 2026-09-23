@@ -73,6 +73,20 @@ export function getYearAgoPeriodRange(start: Date, end: Date) {
   return { start: shiftOneYearBack(start), end: shiftOneYearBack(end) };
 }
 
+function shiftOneMonthBack(date: Date) {
+  const targetMonth = date.getMonth() - 1;
+  const targetYear = date.getFullYear() + Math.floor(targetMonth / 12);
+  const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+  const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+  const shifted = new Date(date);
+  shifted.setFullYear(targetYear, normalizedMonth, Math.min(date.getDate(), lastDay));
+  return shifted;
+}
+
+export function getPreviousMonthPeriodRange(start: Date, end: Date) {
+  return { start: shiftOneMonthBack(start), end: shiftOneMonthBack(end) };
+}
+
 export function getPostsInRange(posts: InstagramPost[], start: Date, end: Date): InstagramPost[] {
   return posts.filter((post) => {
     const date = new Date(post.publishedAt);

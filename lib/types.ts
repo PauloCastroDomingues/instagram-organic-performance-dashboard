@@ -58,7 +58,7 @@ export type DateRange = {
   end: string;
 };
 
-export type ComparisonMode = "none" | "previous" | "yearAgo";
+export type ComparisonMode = "none" | "previous" | "previousMonth" | "yearAgo";
 
 export type SourceInstagramStoryRow = Record<string, string>;
 
@@ -82,3 +82,36 @@ export type InstagramStory = {
   actionRate: number;
   navigationRate: number;
 };
+
+export type InstagramSessionDay = {
+  date: string;
+  organic: number;
+  paid: number;
+  unknown: number;
+  total: number;
+  visitors: number;
+};
+
+export type InstagramPaidDay = {
+  date: string;
+  spend: number;
+  clicks: number;
+  impressions: number;
+  reach: number | null;
+  landingPageViews: number | null;
+};
+
+export type SocialDataPayload = {
+  ok: true;
+  generatedAt: string;
+  sourceUpdatedAt: string;
+  coverage: { sessions: DateRange; paid: DateRange };
+  sessionsDaily: InstagramSessionDay[];
+  paidDaily: InstagramPaidDay[];
+  limitations: string[];
+};
+
+export type SocialDataResult =
+  | { status: "ready"; data: SocialDataPayload }
+  | { status: "unconfigured"; message: string }
+  | { status: "error"; message: string };

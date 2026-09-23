@@ -14,12 +14,15 @@ type FilterBarProps = {
   onComparisonModeChange: (mode: ComparisonMode) => void;
   onPostTypeChange: (postType: string) => void;
   contentLabel?: string;
+  hideContentFilter?: boolean;
+  hideDateControls?: boolean;
 };
 
 type PeriodPreset = { label: string; description: string; range: DateRange };
 
 const comparisonOptions: Array<{ value: ComparisonMode; label: string; description: string }> = [
   { value: "none", label: "Sem comparação", description: "Exibe somente o período selecionado" },
+  { value: "previousMonth", label: "Mês anterior alinhado", description: "Mesmos dias do mês anterior" },
   { value: "previous", label: "Período anterior", description: "Intervalo anterior com a mesma duração" },
   { value: "yearAgo", label: "Mesmo período do ano anterior", description: "Mesmas datas, um ano antes" }
 ];
@@ -61,9 +64,9 @@ function formatShortDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-const controlClass = "flex h-11 min-w-0 items-center justify-between gap-3 rounded-md border border-white/12 bg-white/[0.045] px-3 text-sm font-semibold text-paper transition hover:border-white/25 hover:bg-white/[0.065] focus:outline-none focus-visible:border-apex";
+const controlClass = "flex h-11 min-w-0 items-center justify-between gap-3 border-b border-white/18 bg-transparent px-2 text-sm font-semibold text-paper transition hover:border-apex focus:outline-none focus-visible:border-apex";
 
-export function FilterBar({ range, availableRange, comparisonMode, postType, postTypes, onRangeChange, onComparisonModeChange, onPostTypeChange, contentLabel = "Todos os conteúdos" }: FilterBarProps) {
+export function FilterBar({ range, availableRange, comparisonMode, postType, postTypes, onRangeChange, onComparisonModeChange, onPostTypeChange, contentLabel = "Todos os conteúdos", hideContentFilter = false, hideDateControls = false }: FilterBarProps) {
   const periodRef = useRef<HTMLDetailsElement>(null);
   const comparisonRef = useRef<HTMLDetailsElement>(null);
   const [draftRange, setDraftRange] = useState(range);
@@ -100,8 +103,8 @@ export function FilterBar({ range, availableRange, comparisonMode, postType, pos
   }
 
   return (
-    <section className="relative z-20 mb-1 flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-white/8 bg-[#1a1a18]/92 p-2.5 shadow-panel">
-      <details ref={periodRef} className="group relative min-w-[190px] flex-1 sm:flex-none" onToggle={(event) => { if (event.currentTarget.open) comparisonRef.current?.removeAttribute("open"); }}>
+    <section className="relative z-20 mb-1 grid min-w-0 grid-cols-1 items-center gap-3 border-y border-white/12 bg-white/[0.015] px-1 py-4 sm:flex sm:flex-wrap sm:px-4">
+      {!hideDateControls ? <><details ref={periodRef} className="group relative min-w-0 w-full sm:min-w-[190px] sm:w-auto sm:flex-none" onToggle={(event) => { if (event.currentTarget.open) comparisonRef.current?.removeAttribute("open"); }}>
         <summary className={`${controlClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
           <span className="flex min-w-0 items-center gap-2.5"><CalendarDays size={16} className="shrink-0 text-white/52" /><span className="truncate">{activePreset?.label ?? "Personalizado"}</span></span>
           <ChevronDown size={16} className="shrink-0 text-white/42 transition group-open:rotate-180" />
@@ -129,7 +132,7 @@ export function FilterBar({ range, availableRange, comparisonMode, postType, pos
         </div>
       </details>
 
-      <details ref={comparisonRef} className="group relative min-w-[220px] flex-1 sm:flex-none" onToggle={(event) => { if (event.currentTarget.open) periodRef.current?.removeAttribute("open"); }}>
+      <details ref={comparisonRef} className="group relative min-w-0 w-full sm:min-w-[220px] sm:w-auto sm:flex-none" onToggle={(event) => { if (event.currentTarget.open) periodRef.current?.removeAttribute("open"); }}>
         <summary className={`${controlClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
           <span className="flex min-w-0 items-center gap-2.5"><GitCompareArrows size={16} className="shrink-0 text-white/52" /><span className="truncate">{activeComparison.label}</span></span>
           <ChevronDown size={16} className="shrink-0 text-white/42 transition group-open:rotate-180" />
@@ -146,20 +149,21 @@ export function FilterBar({ range, availableRange, comparisonMode, postType, pos
           </div>
         </div>
       </details>
+      </> : null}
 
-      <label className="relative min-w-[190px] flex-1 sm:flex-none">
+      {!hideContentFilter ? <label className="relative min-w-[190px] flex-1 sm:flex-none">
         <Rows3 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/52" />
         <select aria-label="Tipo de conteúdo" className={`${controlClass} w-full cursor-pointer appearance-none pl-10 pr-9`} value={postType} onChange={(event) => onPostTypeChange(event.target.value)}>
           <option value="Todos">{contentLabel}</option>
           {postTypes.map((type) => <option key={type}>{type}</option>)}
         </select>
         <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/42" />
-      </label>
+      </label> : null}
 
-      <div className="ml-auto hidden text-right xl:block">
+      {!hideDateControls ? <div className="ml-auto hidden text-right xl:block">
         <div className="text-[10px] uppercase tracking-[0.14em] text-white/32">Intervalo ativo</div>
         <div className="mt-0.5 text-xs text-white/56">{formatShortDate(range.start)} a {formatShortDate(range.end)}</div>
-      </div>
+      </div> : null}
     </section>
   );
 }

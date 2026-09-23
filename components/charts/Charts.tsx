@@ -78,7 +78,7 @@ export function TimelineChart({ data, label }: { data: any[]; label: string }) {
               <stop offset="95%" stopColor="#FB5D06" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke={gridColor} vertical={false} strokeDasharray="3 5" />
+          <CartesianGrid stroke={gridColor} vertical={false} strokeDasharray="3 5" strokeLinecap="round" />
           <XAxis dataKey="period" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={10} tickFormatter={formatPeriodLabel} minTickGap={28} />
           <YAxis tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} width={54} tickFormatter={formatCompactNumber} />
           <Tooltip content={<SoftTooltip />} cursor={{ stroke: "rgba(244,244,244,.18)", strokeDasharray: "3 3" }} />
@@ -94,7 +94,7 @@ export function VolumeReachChart({ data }: { data: any[] }) {
     <div className="h-[310px]">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 10, right: 6, bottom: 4, left: 0 }}>
-          <CartesianGrid stroke={gridColor} vertical={false} strokeDasharray="3 5" />
+          <CartesianGrid stroke={gridColor} vertical={false} strokeDasharray="3 5" strokeLinecap="round" />
           <XAxis dataKey="period" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={10} tickFormatter={formatPeriodLabel} minTickGap={28} />
           <YAxis yAxisId="left" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} width={30} allowDecimals={false} />
           <YAxis yAxisId="right" orientation="right" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} width={52} tickFormatter={formatCompactNumber} />
@@ -124,7 +124,7 @@ export function HorizontalBarChart({
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 10 }}>
-          <CartesianGrid stroke={gridColor} horizontal={false} strokeDasharray="3 5" />
+          <CartesianGrid stroke={gridColor} horizontal={false} strokeDasharray="3 5" strokeLinecap="round" />
           <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={percent ? formatPercent : formatCompactNumber} />
           <YAxis dataKey="label" type="category" width={84} tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} />
           <Tooltip content={<SoftTooltip />} />
@@ -166,7 +166,7 @@ export function PerformanceMatrixChart({ data, reachMedian, engagementMedian }: 
     <div className="h-[390px]">
       <ResponsiveContainer width="100%" height="100%">
         <ScatterChart margin={{ top: 14, right: 20, bottom: 28, left: 12 }}>
-          <CartesianGrid stroke={gridColor} strokeDasharray="3 5" />
+          <CartesianGrid stroke={gridColor} strokeDasharray="3 5" strokeLinecap="round" />
           <XAxis type="number" dataKey="reach" name="Alcance" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={9} tickFormatter={formatCompactNumber} label={{ value: "Alcance", position: "insideBottom", offset: -18, fill: "rgba(244,244,244,.38)", fontSize: 11 }} />
           <YAxis type="number" dataKey="engagement" name="Engajamento" tick={axisStyle} tickLine={false} axisLine={false} tickMargin={8} width={55} tickFormatter={formatPercent} label={{ value: "Taxa de engajamento", angle: -90, position: "insideLeft", offset: -2, fill: "rgba(244,244,244,.38)", fontSize: 11 }} />
           <ZAxis type="number" dataKey="views" range={[42, 180]} />

@@ -11,12 +11,12 @@ type ChartFrameProps = {
 export function ChartFrame({ title, subtitle, tooltip, children }: ChartFrameProps) {
   const helpText = tooltip ?? subtitle;
   return (
-    <section className="relative min-w-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.045] p-4 shadow-panel sm:p-5">
-      <span className="absolute left-0 top-0 h-px w-16 bg-apex" aria-hidden="true" />
+    <section className="relative min-w-0 overflow-hidden border-t border-white/14 bg-white/[0.018] px-1 py-5 sm:px-5 sm:py-6">
+      <span className="absolute left-0 top-0 h-[2px] w-20 bg-apex" aria-hidden="true" />
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-start gap-2">
-            <h2 className="break-words font-display text-base font-black uppercase text-paper sm:text-lg">{title}</h2>
+            <h2 className="break-words font-display text-base font-bold uppercase text-paper sm:text-lg">{title}</h2>
             {helpText ? (
               <span className="group/help relative mt-0.5 shrink-0" tabIndex={0} aria-label={`Ajuda sobre ${title}`}>
                 <Info size={15} className="cursor-help text-white/38 transition group-hover/help:text-apex group-focus/help:text-apex" />
